@@ -16,6 +16,7 @@ import time
 from flask_cors import CORS, cross_origin
 from bs4 import BeautifulSoup
 import requests
+import sys
 
 app = Flask(__name__)
 app.secret_key = "12345"
@@ -127,10 +128,13 @@ api.add_resource(Parser, "/parser")
 class ExistingPatterns(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
-        if "patterns" in session:
-            response = session["patterns"]
+        if "patterns" in session and len(session["patterns"]) > 0:
+            print("patterns")
+            print(session["patterns"])
         else:
-            response = ""
+           addSamplePatterns()
+
+        response = session["patterns"]
         return jsonify(response), 200
 
 api.add_resource(ExistingPatterns, "/getPatterns")
@@ -139,11 +143,13 @@ api.add_resource(ExistingPatterns, "/getPatterns")
 class ExistingUrls(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
-        if "htmls" in session:
+        if "htmls" in session and len(session["htmls"]) > 0:
+            print("htmls")
             print(session["htmls"])
-            response = session["htmls"]
         else:
-            response = ""
+            addSampleData()
+
+        response = session["htmls"]
         return jsonify(response), 200
 
 api.add_resource(ExistingUrls, "/getURLs")
@@ -245,6 +251,37 @@ def getAllResutlts(addressList):
             results.append(patternResult)
     return json_normalize(results)
 
+def addSampleData():
+    session["htmls"] = []
+    session["htmls"].append({
+        "html": """<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+
+<h1>My First Heading</h1>
+<p>My first paragraph.</p>
+<p>My second paragraph.</p>
+<p>My third paragraph.</p>
+<div class="block">
+    <p>Block of code</p>
+    <a href="127.0.0.1">Link</a>
+</div>
+</body>
+</html> """,
+        "id": 0,
+        "url": "Sample URL"})
+
+def addSamplePatterns():
+    session["patterns"] = """select: title >>> text === titulek;
+select: body > h1 >>> text === nadpis;
+select: body > div >>> atr(class) ==> trida;
+select: body > p === odstavce;
+    """
+
+
 
 
 def new_email(df, mail):
@@ -270,5 +307,6 @@ def new_email(df, mail):
 
 if __name__ == "__main__":
     app.run(debug=True)
+    print(sys.prefix)
 
 
