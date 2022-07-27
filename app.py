@@ -37,17 +37,6 @@ url_put_args.add_argument("pattern", type=str, help="Parsing pattern" )
 url_put_args.add_argument("id", type=str, help="URL id" )
 url_put_args.add_argument("proxys", type=list, help="Proxy URLs" )
 
-class HelloWorld(Resource):
-    @cross_origin(supports_credentials=True)
-    def get(self, name):
-        return {"data": "Posted"}
-
-    def put(self, video_id):
-        return {"data": "Posted"}
-
-api.add_resource(HelloWorld, "/helloworld/<string:name>")
-
-
 class URL(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
@@ -162,11 +151,9 @@ class UploadFile(Resource):
         df = pd.read_csv(f.stream)
         df_list = df.values.tolist()
         results = getAllResutlts(df_list)
-        try:
-            new_email(results, mail)
 
-        except IOError:
-            print("I/O error")
+        newMail(results, mail)
+
 
         return "size",  200
 
@@ -272,7 +259,7 @@ def addSampleData():
 </body>
 </html> """,
         "id": 0,
-        "url": "Sample URL"})
+        "url": "ukazkova adresa"})
 
 def addSamplePatterns():
     session["patterns"] = """select: title >>> text === titulek;
@@ -284,7 +271,7 @@ select: body > p === odstavce;
 
 
 
-def new_email(df, mail):
+def newMail(df, mail):
     message = MIMEMultipart()
     message['Subject'] = "Web scraping data"
     message['From'] = "webscraperApp@outlook.cz"
@@ -308,5 +295,6 @@ def new_email(df, mail):
 if __name__ == "__main__":
     app.run(debug=True)
     print(sys.prefix)
+
 
 

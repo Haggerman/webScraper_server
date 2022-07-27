@@ -9,7 +9,6 @@ class Result:
 
     def parse(self, html, pattern):
         html = BeautifulSoup(html, "lxml")
-        print(pattern)
         try:
             if(self.type != ""):
                 if (self.type == "text"):
@@ -25,7 +24,6 @@ class Result:
         except:
             self.result = "ERROR: Vzor nebyl zadán správně "
 
-        print(self.result)
         return self.result
 
 
