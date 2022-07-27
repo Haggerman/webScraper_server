@@ -274,7 +274,7 @@ select: body > p === odstavce;
 def newMail(df, mail):
     message = MIMEMultipart()
     message['Subject'] = "Web scraping data"
-    message['From'] = "webscraperApp@outlook.cz"
+    message['From'] = "jan.ther@seznam.cz"
     message['To'] = mail
 
     bio = io.BytesIO()
@@ -286,10 +286,10 @@ def newMail(df, mail):
     body = MIMEText("Here is your data", 'plain')
     message.attach(body)
     message.attach(attachement)
-    with smtplib.SMTP("smtp.office365.com", 587) as server:
+    with smtplib.SMTP("smtp-relay.sendinblue.com", 587) as server:
         server.starttls()
-        server.login("webscraperApp@outlook.cz","Heslo12345")
-        server.sendmail("webscraperApp@outlook.cz",mail, message.as_string())
+        server.login("jan.ther@seznam.cz","POgrdb1M24D7JwSL")
+        server.sendmail("jan.ther@seznam.cz",mail, message.as_string())
 
 
 if __name__ == "__main__":
