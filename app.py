@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import random
 import pandas as pd
@@ -50,7 +51,7 @@ class URL(Resource):
         return jsonify(url.text)
 
     @cross_origin(supports_credentials=True)
-    def put(self):
+    def post(self):
         args = url_put_args.parse_args()
         url = args["url"]
         id = args["id"]
@@ -96,7 +97,7 @@ class Parser(Resource):
         return jsonify(url.text), 200
 
     @cross_origin(supports_credentials=True)
-    def put(self):
+    def post(self):
         results = []
         args = url_put_args.parse_args()
         pattern = args["pattern"]
@@ -153,6 +154,7 @@ class UploadFile(Resource):
     def post(self):
         f = request.files['file']
         mail = request.form['mail']
+        type = request.form['type']
         patterns = []
         proxys = []
         if "patterns" in session:
@@ -160,16 +162,16 @@ class UploadFile(Resource):
         if "proxys" in session:
             proxys = session["proxys"]
 
-        def bulkExtraction(f, e, patt, proxy):
+        def bulkExtraction(f, e, patt, proxy,type):
             df = pd.read_csv(f.stream)
             df_list = df.values.tolist()
             results = getAllResutlts(df_list, patt,proxy)
             try:
-                newMail(results, e)
+                newMail(results, e, type)
             except IOError:
                 print("mail error")
 
-        thread = Thread(target=bulkExtraction, args=(f,mail,patterns,proxys))
+        thread = Thread(target=bulkExtraction, args=(f,mail,patterns,proxys,type))
         thread.start()
 
         return jsonify("Data predana")
@@ -180,7 +182,7 @@ api.add_resource(UploadFile, "/uploadFile")
 
 class AddProxy(Resource):
     @cross_origin(supports_credentials=True)
-    def put(self):
+    def post(self):
         proxys = request.json['proxys']
         print(proxys)
         if "proxys" in session:
@@ -248,7 +250,7 @@ def getAllResutlts(addressList, patterns, proxys):
                         patternResult[p.name] = r
             time.sleep(0.5)
             results.append(patternResult)
-    return json_normalize(results)
+    return results
 
 def addSampleData():
     session["htmls"] = []
@@ -283,17 +285,24 @@ select: body > p === odstavce;
 
 
 
-def newMail(df, mail):
+def newMail(df, mail, type):
     message = MIMEMultipart()
     message['Subject'] = "Web scraping data"
     message['From'] = os.getenv("MAIL")
     message['To'] = mail
 
-    bio = io.BytesIO()
-    df.to_csv(bio,mode="wb")
-    bio.seek(0)
-    attachement = MIMEApplication(bio.getvalue(),Name="Results")
-    attachement.add_header("Content-Disposition", "attachement", filename="Results.csv")
+    if type=="CSV":
+        bio = io.BytesIO()
+        df = json_normalize(df)
+        df.to_csv(bio,mode="wb")
+        bio.seek(0)
+        attachement = MIMEApplication(bio.getvalue(),Name="Results")
+        attachement.add_header("Content-Disposition", "attachement", filename="Results.csv")
+    else:
+        json_payload = json.dumps(df,ensure_ascii=False).encode('utf8')
+        attachement = MIMEApplication(json_payload,Name="Results")
+        attachement.add_header("Content-Disposition", "attachement", filename="Results.json")
+        attachement.add_header('Content-Type','application/json')
 
     body = MIMEText("Here is your data", 'plain')
     message.attach(body)
@@ -303,17 +312,9 @@ def newMail(df, mail):
         server.login(os.getenv("MAIL"),os.getenv("PASSWORD"))
         server.sendmail(os.getenv("MAIL"),mail, message.as_string())
 
-def bulkExtraction(f,mail):
-    df = pd.read_csv(f.stream)
-    df_list = df.values.tolist()
-    results = getAllResutlts(df_list)
-    newMail(results, mail)
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)
-    print(sys.prefix)
 
 
 
