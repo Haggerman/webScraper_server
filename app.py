@@ -17,6 +17,7 @@ from flask_cors import CORS, cross_origin
 from bs4 import BeautifulSoup
 import requests
 import sys
+from threading import Thread
 
 app = Flask(__name__)
 app.secret_key = "12345"
@@ -148,14 +149,26 @@ class UploadFile(Resource):
     def post(self):
         f = request.files['file']
         mail = request.form['mail']
-        df = pd.read_csv(f.stream)
-        df_list = df.values.tolist()
-        results = getAllResutlts(df_list)
+        patterns = []
+        proxys = []
+        if "patterns" in session:
+            patterns = getAllPatterns(session["patterns"])
+        if "proxys" in session:
+            proxys = session["proxys"]
 
-        newMail(results, mail)
+        def bulkExtraction(f, e, patt, proxy):
+            df = pd.read_csv(f.stream)
+            df_list = df.values.tolist()
+            results = getAllResutlts(df_list, patt,proxy)
+            try:
+                newMail(results, e)
+            except IOError:
+                print("mail error")
 
+        thread = Thread(target=bulkExtraction, args=(f,mail,patterns,proxys))
+        thread.start()
 
-        return "size",  200
+        return jsonify("Data predana")
 
 
 api.add_resource(UploadFile, "/uploadFile")
@@ -209,13 +222,8 @@ def getAllPatterns(pattern):
 
     return namedPatterns
 
-def getAllResutlts(addressList):
-    patterns = getAllPatterns(session["patterns"])
-    proxys = []
+def getAllResutlts(addressList, patterns, proxys):
     results = []
-    print("vsechny vysledky")
-    if "proxys" in session:
-        proxys = session["proxys"]
     if len(patterns)>0:
         for i,a in enumerate(addressList):
             patternResult = {'url':a[0]}
@@ -290,6 +298,13 @@ def newMail(df, mail):
         server.starttls()
         server.login("jan.ther@seznam.cz","POgrdb1M24D7JwSL")
         server.sendmail("jan.ther@seznam.cz",mail, message.as_string())
+
+def bulkExtraction(f,mail):
+    df = pd.read_csv(f.stream)
+    df_list = df.values.tolist()
+    results = getAllResutlts(df_list)
+    newMail(results, mail)
+
 
 
 if __name__ == "__main__":
