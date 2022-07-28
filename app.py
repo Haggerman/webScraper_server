@@ -1,4 +1,5 @@
 import io
+import os
 import random
 import pandas as pd
 from pandas.io.json import json_normalize
@@ -18,6 +19,9 @@ from bs4 import BeautifulSoup
 import requests
 import sys
 from threading import Thread
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "12345"
@@ -282,7 +286,7 @@ select: body > p === odstavce;
 def newMail(df, mail):
     message = MIMEMultipart()
     message['Subject'] = "Web scraping data"
-    message['From'] = "jan.ther@seznam.cz"
+    message['From'] = os.getenv("MAIL")
     message['To'] = mail
 
     bio = io.BytesIO()
@@ -296,8 +300,8 @@ def newMail(df, mail):
     message.attach(attachement)
     with smtplib.SMTP("smtp-relay.sendinblue.com", 587) as server:
         server.starttls()
-        server.login("jan.ther@seznam.cz","POgrdb1M24D7JwSL")
-        server.sendmail("jan.ther@seznam.cz",mail, message.as_string())
+        server.login(os.getenv("MAIL"),os.getenv("PASSWORD"))
+        server.sendmail(os.getenv("MAIL"),mail, message.as_string())
 
 def bulkExtraction(f,mail):
     df = pd.read_csv(f.stream)
