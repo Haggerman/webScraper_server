@@ -45,10 +45,26 @@ url_put_args.add_argument("proxys", type=list, help="Proxy URLs" )
 
 class URL(Resource):
     @cross_origin(supports_credentials=True)
-    def get(self):
+    def delete(self):
         args = url_put_args.parse_args()
-        url = args
-        return jsonify(url.text)
+        id = int(args["id"])
+        if "htmls" in session:
+            newList = [html for html in session["htmls"] if int(html["id"]) != id]
+            session["htmls"] = newList
+        else:
+            session["htmls"] = []
+
+        return jsonify(session["htmls"]), 200
+
+    @cross_origin(supports_credentials=True)
+    def get(self):
+        if "htmls" in session and len(session["htmls"]) > 0:
+            session["htmls"]
+        else:
+            addSampleData()
+
+        response = session["htmls"]
+        return jsonify(response)
 
     @cross_origin(supports_credentials=True)
     def post(self):
@@ -56,46 +72,25 @@ class URL(Resource):
         url = args["url"]
         id = args["id"]
         header = headerRotation.rotateHeaders()
-        result = requests.get(url, headers=header)
-        print(result.text)
-        html = BeautifulSoup(result.text, "lxml")
-        html = html.prettify()
-        if "htmls" in session:
-            print("session existuje")
-            session["htmls"].append({"html": html, "id": id, "url": url})
+        try:
+            result = requests.get(url, headers=header)
+            html = BeautifulSoup(result.text, "lxml")
+            html = html.prettify()
+            if "htmls" in session:
+                session["htmls"].append({"html": html, "id": id, "url": url})
+            else:
+                session["htmls"] = []
+                session["htmls"].append({"html": html, "id": id, "url": url})
+            response = jsonify(str(html))
+        except:
+            response = "Adresa neodpovídá", 500
 
-        else:
-            print("session neexistuje")
-            session["htmls"] = []
-            session["htmls"].append({"html": html, "id": id, "url": url})
-
-
-        print(session["htmls"])
-        return jsonify(str(html)), 200
+        return response
 
 api.add_resource(URL, "/url")
 
-class DeleteURL(Resource):
-    def delete(self):
-        args = url_put_args.parse_args()
-        id = int(args["id"])
-        if "htmls" in session:
-            newList = [html for html in session["htmls"] if int(html["id"]) != id]
-            session["htmls"] = newList
-
-        return "Done", 200
-
-
-api.add_resource(DeleteURL, "/deleteUrl")
-
 
 class Parser(Resource):
-    @cross_origin(supports_credentials=True)
-    def get(self):
-        args = url_put_args.parse_args()
-        url = args
-        return jsonify(url.text), 200
-
     @cross_origin(supports_credentials=True)
     def post(self):
         results = []
@@ -103,24 +98,26 @@ class Parser(Resource):
         pattern = args["pattern"]
         session["patterns"] = pattern
         if "htmls" in session:
-           print("toto jsou sessions")
-           print(session["htmls"])
            try:
                 patterns = getAllPatterns(pattern)
-                for p in patterns:
-                    for html in session["htmls"]:
-                        result = Result(p.name, p.type, p.multiple)
-                        r = result.parse(html["html"],p.strippedPattern)
-                        results.append({"title": p.name, "result": r, "id":html["id"]})
+                if len(patterns)>0:
+                    for p in patterns:
+                        for html in session["htmls"]:
+                            result = Result(p.name, p.type, p.multiple)
+                            r = result.parse(html["html"],p.strippedPattern)
+                            results.append({"title": p.name, "result": r, "id":html["id"]})
+                else:
+                    results.append({"title": "error", "result": "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
+
            except:
                results.append({"title": "error", "result" : "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
 
-        return jsonify(results), 200
+        return jsonify(results)
 
 api.add_resource(Parser, "/parser")
 
 
-class ExistingPatterns(Resource):
+class Patterns(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
         if "patterns" in session and len(session["patterns"]) > 0:
@@ -130,26 +127,11 @@ class ExistingPatterns(Resource):
            addSamplePatterns()
 
         response = session["patterns"]
-        return jsonify(response), 200
+        return jsonify(response)
 
-api.add_resource(ExistingPatterns, "/getPatterns")
+api.add_resource(Patterns, "/getPatterns")
 
-
-class ExistingUrls(Resource):
-    @cross_origin(supports_credentials=True)
-    def get(self):
-        if "htmls" in session and len(session["htmls"]) > 0:
-            print("htmls")
-            print(session["htmls"])
-        else:
-            addSampleData()
-
-        response = session["htmls"]
-        return jsonify(response), 200
-
-api.add_resource(ExistingUrls, "/getURLs")
-
-class UploadFile(Resource):
+class File(Resource):
     @cross_origin(supports_credentials=True)
     def post(self):
         f = request.files['file']
@@ -157,13 +139,19 @@ class UploadFile(Resource):
         type = request.form['type']
         patterns = []
         proxys = []
+        df=""
         if "patterns" in session:
             patterns = getAllPatterns(session["patterns"])
         if "proxys" in session:
             proxys = session["proxys"]
 
-        def bulkExtraction(f, e, patt, proxy,type):
+        try:
             df = pd.read_csv(f.stream)
+            response = jsonify("Data uspesne predana")
+        except:
+            response = jsonify("Soubor je ve spatnem formatu")
+
+        def bulkExtraction(df, e, patt, proxy,type):
             df_list = df.values.tolist()
             results = getAllResutlts(df_list, patt,proxy)
             try:
@@ -171,20 +159,20 @@ class UploadFile(Resource):
             except IOError:
                 print("mail error")
 
-        thread = Thread(target=bulkExtraction, args=(f,mail,patterns,proxys,type))
-        thread.start()
+        if len(df) > 0:
+            thread = Thread(target=bulkExtraction, args=(df,mail,patterns,proxys,type))
+            thread.start()
 
-        return jsonify("Data predana")
-
-
-api.add_resource(UploadFile, "/uploadFile")
+        return response
 
 
-class AddProxy(Resource):
+api.add_resource(File, "/uploadFile")
+
+
+class Proxy(Resource):
     @cross_origin(supports_credentials=True)
     def post(self):
         proxys = request.json['proxys']
-        print(proxys)
         if "proxys" in session:
             session["proxys"] = proxys
 
@@ -192,39 +180,24 @@ class AddProxy(Resource):
             session["proxys"] = []
             session["proxys"] = proxys
 
-        return jsonify(str(proxys)), 200
+        return jsonify(str(proxys))
 
-
-api.add_resource(AddProxy, "/addProxy")
-
-
-
-class SessionCreate(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
-        session["test"] = "Toto je test"
-        return f'Obsah session: {session.get("test")}', 200
+        response = ""
+        if "proxys" in session and len(session["proxys"]) > 0:
+            response = session["proxys"]
 
-api.add_resource(SessionCreate, "/sessionCreate")
+        return jsonify(response)
 
-class SessionClear(Resource):
-    @cross_origin(supports_credentials=True)
-    def get(self):
-        session.clear()
-        return 'Smazano', 200
-
-api.add_resource(SessionClear, "/sessionClear")
+api.add_resource(Proxy, "/proxy")
 
 def getAllPatterns(pattern):
     namedPatterns = set()
     patterns = pattern.split(";")
     for subPattern in patterns:
-        print(subPattern)
         if subPattern.find('==') > -1:
             namedPatterns.add(Pattern(subPattern))
-    if len(namedPatterns) > 0:
-        for p in namedPatterns:
-            print(p.name)
 
     return namedPatterns
 
@@ -281,9 +254,6 @@ select: body > h1 >>> text === nadpis;
 select: body > div >>> atr(class) ==> trida;
 select: body > p === odstavce;
     """
-
-
-
 
 def newMail(df, mail, type):
     message = MIMEMultipart()

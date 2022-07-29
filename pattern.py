@@ -19,7 +19,7 @@ class Pattern:
             self.name = self.text.split('===', 1)[1].strip()
             self.multiple = True
         else:
-            self.name = "Incorrect pattern format"
+            self.name = "ERROR: Vzor nebyl zadán ve správném formátu"
 
     def setType(self):
         if self.text.find('>>>') > -1:
@@ -28,9 +28,6 @@ class Pattern:
                 self.type = re.search("atr\((.*)\)", self.text).group(1).strip()
             else:
                 self.type = "text"
-
-        print(self.type)
-
 
     def setStrippedPattern(self):
         if self.text.find(">>>") > -1:

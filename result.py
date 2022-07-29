@@ -22,7 +22,7 @@ class Result:
             if not self.multiple and self.result:
                 self.result = self.result[0]
         except:
-            self.result = "ERROR: Vzor nebyl zadán správně "
+            self.result = "ERROR: Vzor nebyl zadán ve správném formátu"
 
         return self.result
 
