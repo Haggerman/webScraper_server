@@ -34,7 +34,6 @@ CORS(app, support_credentials=True)
 api = Api(app)
 htmls = []
 
-#Overuje, ze je request spravne
 url_put_args = reqparse.RequestParser()
 url_put_args.add_argument("url", type=str, help="URL" )
 url_put_args.add_argument("mail", type=str, help="mail" )
@@ -120,12 +119,11 @@ class Patterns(Resource):
     @cross_origin(supports_credentials=True)
     def get(self):
         if "patterns" in session and len(session["patterns"]) > 0:
-            print("patterns")
-            print(session["patterns"])
+            response = session["patterns"]
         else:
            addSamplePatterns()
+           response = session["patterns"]
 
-        response = session["patterns"]
         return jsonify(response)
 
 api.add_resource(Patterns, "/getPatterns")
@@ -155,8 +153,8 @@ class File(Resource):
             results = getAllResutlts(df_list, patt,proxy)
             try:
                 newMail(results, e, type)
-            except IOError:
-                print("mail error")
+            except Exception as ex:
+                print(ex)
 
         if len(df) > 0:
             thread = Thread(target=bulkExtraction, args=(df,mail,patterns,proxys,type))
@@ -173,6 +171,7 @@ class Proxy(Resource):
     def post(self):
         proxys = request.json['proxys']
         if "proxys" in session:
+
             session["proxys"] = proxys
 
         else:
@@ -191,6 +190,29 @@ class Proxy(Resource):
 
 api.add_resource(Proxy, "/proxy")
 
+class ProxyChecker(Resource):
+    @cross_origin(supports_credentials=True)
+    def post(self):
+        proxy = request.json['proxy']
+        if len(proxy)>0:
+            newProxy = getProxy(proxy)
+            header = headerRotation.rotateHeaders()
+            try:
+                response = requests.get("http://example.com/", proxies={"http": newProxy, "https": newProxy}, headers=header)
+                response = jsonify(response.text)
+            except Exception as ex:
+                if hasattr(ex, 'message'):
+                    response = ex.message, 404
+                else:
+                    response = "Chyba proxy", 404
+
+        return response
+
+
+api.add_resource(ProxyChecker, "/checkProxy")
+
+
+
 def getAllPatterns(pattern):
     namedPatterns = set()
     patterns = pattern.split(";")
@@ -208,7 +230,7 @@ def getAllResutlts(addressList, patterns, proxys):
             header = headerRotation.rotateHeaders()
             a=a[0]
             if len(proxys)>0:
-                proxy = proxys[random.randint(len(proxys))]["url"]
+                proxy = proxyRandom(proxys)
                 response = requests.get(a, proxies={"http": proxy, "https": proxy}, headers=header)
                 for p in patterns:
                         result = Result(p.name, p.type, p.multiple)
@@ -280,6 +302,23 @@ def newMail(df, mail, type):
         server.starttls()
         server.login(os.getenv("MAIL"),os.getenv("PASSWORD"))
         server.sendmail(os.getenv("MAIL"),mail, message.as_string())
+
+def getProxy(proxy):
+    if(proxy["pass"] == ""):
+        newAddress = proxy["url"]
+    else:
+        split = proxy["url"].split("://")
+        newAddress = (split[0] + "://" + proxy["user"] + ":" + proxy["pass"] + "@" + split[1])
+
+    return newAddress
+
+
+def proxyRandom(proxys):
+    newProxys = []
+    for p in proxys:
+        newProxys(p)
+
+    return random.choice(newProxys)
 
 
 if __name__ == "__main__":

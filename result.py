@@ -18,10 +18,9 @@ class Result:
             else:
                 self.result = [str(a) for a in html.select(pattern)]
 
-            print(self.result)
             if not self.multiple and self.result:
                 self.result = self.result[0]
-        except:
+        except Exception as ex:
             self.result = "ERROR: Vzor nebyl zadán ve správném formátu"
 
         return self.result
