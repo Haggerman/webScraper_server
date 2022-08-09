@@ -35,11 +35,12 @@ api = Api(app)
 htmls = []
 
 url_put_args = reqparse.RequestParser()
-url_put_args.add_argument("url", type=str, help="URL" )
-url_put_args.add_argument("mail", type=str, help="mail" )
-url_put_args.add_argument("pattern", type=str, help="Parsing pattern" )
-url_put_args.add_argument("id", type=str, help="URL id" )
-url_put_args.add_argument("proxys", type=list, help="Proxy URLs" )
+url_put_args.add_argument("url", type=str, help="URL")
+url_put_args.add_argument("mail", type=str, help="mail")
+url_put_args.add_argument("pattern", type=str, help="Parsing pattern")
+url_put_args.add_argument("id", type=str, help="URL id")
+url_put_args.add_argument("proxys", type=list, help="Proxy URLs")
+
 
 class URL(Resource):
     @cross_origin(supports_credentials=True)
@@ -85,6 +86,7 @@ class URL(Resource):
 
         return response
 
+
 api.add_resource(URL, "/url")
 
 
@@ -96,21 +98,23 @@ class Parser(Resource):
         pattern = args["pattern"]
         session["patterns"] = pattern
         if "htmls" in session:
-           try:
+            try:
                 patterns = getAllPatterns(pattern)
-                if len(patterns)>0:
+                if len(patterns) > 0:
                     for p in patterns:
                         for html in session["htmls"]:
-                            result = Result(p.name, p.type, p.multiple)
-                            r = result.parse(html["html"],p.strippedPattern)
-                            results.append({"title": p.name, "result": r, "id":html["id"]})
+                            result = Result(p)
+                            r = result.parse(html["html"])
+                            results.append({"title": p.name, "result": r, "id": html["id"]})
                 else:
-                    results.append({"title": "error", "result": "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
+                    results.append(
+                        {"title": "error", "result": "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
 
-           except:
-               results.append({"title": "error", "result" : "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
+            except:
+                results.append({"title": "error", "result": "ERROR: Vzor nebyl zadán ve správném formátu", "id": -1})
 
         return jsonify(results)
+
 
 api.add_resource(Parser, "/parser")
 
@@ -121,12 +125,14 @@ class Patterns(Resource):
         if "patterns" in session and len(session["patterns"]) > 0:
             response = session["patterns"]
         else:
-           addSamplePatterns()
-           response = session["patterns"]
+            addSamplePatterns()
+            response = session["patterns"]
 
         return jsonify(response)
 
+
 api.add_resource(Patterns, "/getPatterns")
+
 
 class File(Resource):
     @cross_origin(supports_credentials=True)
@@ -136,7 +142,7 @@ class File(Resource):
         type = request.form['type']
         patterns = []
         proxys = []
-        df=""
+        df = ""
         if "patterns" in session:
             patterns = getAllPatterns(session["patterns"])
         if "proxys" in session:
@@ -148,16 +154,16 @@ class File(Resource):
         except:
             response = jsonify("Soubor je ve spatnem formatu")
 
-        def bulkExtraction(df, e, patt, proxy,type):
+        def bulkExtraction(df, e, patt, proxy, type):
             df_list = df.values.tolist()
-            results = getAllResutlts(df_list, patt,proxy)
+            results = getAllResutlts(df_list, patt, proxy)
             try:
                 newMail(results, e, type)
             except Exception as ex:
                 print(ex)
 
         if len(df) > 0:
-            thread = Thread(target=bulkExtraction, args=(df,mail,patterns,proxys,type))
+            thread = Thread(target=bulkExtraction, args=(df, mail, patterns, proxys, type))
             thread.start()
 
         return response
@@ -188,17 +194,21 @@ class Proxy(Resource):
 
         return jsonify(response)
 
+
 api.add_resource(Proxy, "/proxy")
+
 
 class ProxyChecker(Resource):
     @cross_origin(supports_credentials=True)
     def post(self):
         proxy = request.json['proxy']
-        if len(proxy)>0:
+        print(type(proxy))
+        if len(proxy) > 0:
             newProxy = getProxy(proxy)
             header = headerRotation.rotateHeaders()
             try:
-                response = requests.get("http://example.com/", proxies={"http": newProxy, "https": newProxy}, headers=header)
+                response = requests.get("http://example.com/", proxies={"http": newProxy, "https": newProxy},
+                                        headers=header)
                 response = jsonify(response.text)
             except Exception as ex:
                 if hasattr(ex, 'message'):
@@ -212,7 +222,6 @@ class ProxyChecker(Resource):
 api.add_resource(ProxyChecker, "/checkProxy")
 
 
-
 def getAllPatterns(pattern):
     namedPatterns = set()
     patterns = pattern.split(";")
@@ -222,29 +231,31 @@ def getAllPatterns(pattern):
 
     return namedPatterns
 
+
 def getAllResutlts(addressList, patterns, proxys):
     results = []
-    if len(patterns)>0:
-        for i,a in enumerate(addressList):
-            patternResult = {'url':a[0]}
+    if len(patterns) > 0:
+        for i, a in enumerate(addressList):
+            patternResult = {'url': a[0]}
             header = headerRotation.rotateHeaders()
-            a=a[0]
-            if len(proxys)>0:
+            a = a[0]
+            if len(proxys) > 0:
                 proxy = proxyRandom(proxys)
                 response = requests.get(a, proxies={"http": proxy, "https": proxy}, headers=header)
                 for p in patterns:
-                        result = Result(p.name, p.type, p.multiple)
-                        r = result.parse(response.text,p.strippedPattern)
-                        patternResult[p.name]=r
+                    result = Result(p)
+                    r = result.parse(response.text)
+                    patternResult[p.name] = r
             else:
                 response = requests.get(a, headers=header)
                 for p in patterns:
-                        result = Result(p.name, p.type, p.multiple)
-                        r = result.parse(response.text, p.strippedPattern)
-                        patternResult[p.name] = r
+                    result = Result(p)
+                    r = result.parse(response.text)
+                    patternResult[p.name] = r
             time.sleep(0.5)
             results.append(patternResult)
     return results
+
 
 def addSampleData():
     session["htmls"] = []
@@ -263,11 +274,13 @@ def addSampleData():
 <div class="block">
     <p>Block of code</p>
     <a href="127.0.0.1">Link</a>
+    <a href="127.0.0.1">Link</a>
 </div>
 </body>
 </html> """,
         "id": 0,
         "url": "ukazkova adresa"})
+
 
 def addSamplePatterns():
     session["patterns"] = """select: title >>> text === titulek;
@@ -276,35 +289,37 @@ select: body > div >>> atr(class) ==> trida;
 select: body > p === odstavce;
     """
 
+
 def newMail(df, mail, type):
     message = MIMEMultipart()
     message['Subject'] = "Web scraping data"
     message['From'] = os.getenv("MAIL")
     message['To'] = mail
 
-    if type=="CSV":
+    if type == "CSV":
         bio = io.BytesIO()
         df = json_normalize(df)
-        df.to_csv(bio,mode="wb")
+        df.to_csv(bio, mode="wb")
         bio.seek(0)
-        attachement = MIMEApplication(bio.getvalue(),Name="Results")
+        attachement = MIMEApplication(bio.getvalue(), Name="Results")
         attachement.add_header("Content-Disposition", "attachement", filename="Results.csv")
     else:
-        json_payload = json.dumps(df,ensure_ascii=False).encode('utf8')
-        attachement = MIMEApplication(json_payload,Name="Results")
+        json_payload = json.dumps(df, ensure_ascii=False).encode('utf8')
+        attachement = MIMEApplication(json_payload, Name="Results")
         attachement.add_header("Content-Disposition", "attachement", filename="Results.json")
-        attachement.add_header('Content-Type','application/json')
+        attachement.add_header('Content-Type', 'application/json')
 
     body = MIMEText("Here is your data", 'plain')
     message.attach(body)
     message.attach(attachement)
     with smtplib.SMTP("smtp-relay.sendinblue.com", 587) as server:
         server.starttls()
-        server.login(os.getenv("MAIL"),os.getenv("PASSWORD"))
-        server.sendmail(os.getenv("MAIL"),mail, message.as_string())
+        server.login(os.getenv("MAIL"), os.getenv("PASSWORD"))
+        server.sendmail(os.getenv("MAIL"), mail, message.as_string())
+
 
 def getProxy(proxy):
-    if(proxy["pass"] == ""):
+    if (proxy["pass"] == ""):
         newAddress = proxy["url"]
     else:
         split = proxy["url"].split("://")
@@ -323,6 +338,3 @@ def proxyRandom(proxys):
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-

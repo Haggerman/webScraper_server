@@ -1,44 +1,67 @@
 import re
 
+
 class Pattern:
     def __init__(self, text: str):
-        self.text = text
-        self.name = ""
-        self.type = ""
-        self.strippedPattern = ""
-        self.multiple = True
-        self.setName()
-        self.setType()
-        self.setStrippedPattern()
+        self.__text = text
+        self.__name = ""
+        self.__type = ""
+        self.__strippedPattern = ""
+        self.__multiple = True
+        self.__findName()
+        self.__findType()
+        self.__createStrippedPattern()
 
-    def setName(self):
-        if self.text.find("==>") > -1:
-            self.name = self.text.split('==>',1)[1].strip()
-            self.multiple = False
-        elif self.text.find("===") > -1:
-            self.name = self.text.split('===', 1)[1].strip()
-            self.multiple = True
+    def __findName(self):
+        if self.__text.find("==>") > -1:
+            self.__name = self.__text.split('==>', 1)[1].strip()
+            self.__multiple = False
+        elif self.__text.find("===") > -1:
+            self.__name = self.__text.split('===', 1)[1].strip()
+            self.__multiple = True
         else:
-            self.name = "ERROR: Vzor nebyl zadán ve správném formátu"
+            self.__name = "ERROR: Vzor nebyl zadán ve správném formátu"
 
-    def setType(self):
-        if self.text.find('>>>') > -1:
-            self.type = re.search(">>>(.*[^==])==", self.text).group(1).strip()
-            if self.type.find('atr') > -1:
-                self.type = re.search("atr\((.*)\)", self.text).group(1).strip()
+    def __findType(self):
+        if self.__text.find('>>>') > -1:
+            self.__type = re.search(">>>(.*[^==])==", self.__text).group(1).strip()
+            if self.__type.find('atr') > -1:
+                self.__type = re.search("atr\((.*)\)", self.__text).group(1).strip()
             else:
-                self.type = "text"
+                self.__type = "text"
 
-    def setStrippedPattern(self):
-        if self.text.find(">>>") > -1:
-            self.strippedPattern = re.search("select:(.*)>>>", self.text).group(1).strip()
+    def __createStrippedPattern(self):
+        if self.__text.find(">>>") > -1:
+            self.__strippedPattern = re.search("select:(.*)>>>", self.__text).group(1).strip()
 
         else:
-            self.strippedPattern = re.search("select:(.*[^==])==", self.text).group(1).strip()
+            self.__strippedPattern = re.search("select:(.*[^==])==", self.__text).group(1).strip()
 
-        self.strippedPattern = self.strippedPattern.replace(" ","")
+        self.__strippedPattern = self.__strippedPattern.replace(" ", "")
 
-        if self.strippedPattern.find("tbody") > -1:
-            self.strippedPattern = self.strippedPattern.replace("tbody>", "")
+        if self.__strippedPattern.find("tbody") > -1:
+            self.__strippedPattern = self.__strippedPattern.replace("tbody>", "")
 
+    @property
+    def name(self):
+        return self.__name
 
+    @property
+    def text(self):
+        return self.__text
+
+    @text.setter
+    def text(self, value):
+        self.__name = value
+
+    @property
+    def type(self):
+        return self.__type
+
+    @property
+    def multiple(self):
+        return self.__multiple
+
+    @property
+    def strippedPattern(self):
+        return self.__strippedPattern
