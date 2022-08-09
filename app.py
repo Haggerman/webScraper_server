@@ -241,17 +241,24 @@ def getAllResutlts(addressList, patterns, proxys):
             a = a[0]
             if len(proxys) > 0:
                 proxy = proxyRandom(proxys)
-                response = requests.get(a, proxies={"http": proxy, "https": proxy}, headers=header)
-                for p in patterns:
-                    result = Result(p)
-                    r = result.parse(response.text)
-                    patternResult[p.name] = r
+                try:
+                    response = requests.get(a, proxies={"http": proxy, "https": proxy}, headers=header)
+                    for p in patterns:
+                        result = Result(p)
+                        r = result.parse(response.text)
+                        patternResult[p.name] = r
+                except Exception as ex:
+                    patternResult["chyba"] = "Stránka je nedostupná"
             else:
-                response = requests.get(a, headers=header)
-                for p in patterns:
-                    result = Result(p)
-                    r = result.parse(response.text)
-                    patternResult[p.name] = r
+                try:
+                    response = requests.get(a, headers=header)
+                    for p in patterns:
+                        result = Result(p)
+                        r = result.parse(response.text)
+                        patternResult[p.name] = r
+                except Exception as ex:
+                    patternResult["chyba"] = "Stránka je nedostupná"
+
             time.sleep(0.5)
             results.append(patternResult)
     return results
