@@ -21,6 +21,7 @@ import requests
 from threading import Thread
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -73,6 +74,7 @@ class URL(Resource):
         header = headerRotation.rotateHeaders()
         try:
             result = requests.get(url, headers=header)
+#            result = seleniumBrowse.connectWithSelenium(url)
             html = BeautifulSoup(result.text, "lxml")
             html = html.prettify()
             if "htmls" in session:
@@ -202,7 +204,6 @@ class ProxyChecker(Resource):
     @cross_origin(supports_credentials=True)
     def post(self):
         proxy = request.json['proxy']
-        print(type(proxy))
         if len(proxy) > 0:
             newProxy = getProxy(proxy)
             header = headerRotation.rotateHeaders()
@@ -306,7 +307,7 @@ def newMail(df, mail, type):
     if type == "CSV":
         bio = io.BytesIO()
         df = json_normalize(df)
-        df.to_csv(bio, mode="wb")
+        df.to_csv(bio,encoding='utf-8', mode="wb")
         bio.seek(0)
         attachement = MIMEApplication(bio.getvalue(), Name="Results")
         attachement.add_header("Content-Disposition", "attachement", filename="Results.csv")
@@ -338,7 +339,7 @@ def getProxy(proxy):
 def proxyRandom(proxys):
     newProxys = []
     for p in proxys:
-        newProxys(p)
+        newProxys.append(getProxy(p))
 
     return random.choice(newProxys)
 
