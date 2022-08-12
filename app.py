@@ -74,7 +74,6 @@ class URL(Resource):
         header = headerRotation.rotateHeaders()
         try:
             result = requests.get(url, headers=header)
-#            result = seleniumBrowse.connectWithSelenium(url)
             html = BeautifulSoup(result.text, "lxml")
             html = html.prettify()
             if "htmls" in session:

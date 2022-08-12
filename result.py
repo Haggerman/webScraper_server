@@ -24,6 +24,9 @@ class Result:
         except Exception as ex:
             self.__parsedData = "ERROR: Vzor nebyl zadán ve správném formátu"
 
+        if self.__parsedData is None:
+            self.__parsedData = []
+
         return self.__parsedData
 
     @property
