@@ -281,7 +281,7 @@ def addSampleData():
 <div class="block">
     <p>Block of code</p>
     <a href="127.0.0.1">Link</a>
-    <a href="127.0.0.1">Link</a>
+    <a href="127.0.0.2">Link</a>
 </div>
 </body>
 </html> """,

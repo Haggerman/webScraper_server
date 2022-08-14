@@ -16,6 +16,15 @@ class Result:
                 else:
                     self.__parsedData = [a.get(self.__pattern.type) for a in
                                          html.select(self.__pattern.strippedPattern)]
+
+                    if (len(self.__parsedData) > 0 and self.__parsedData[0]):
+                        if isinstance(self.__parsedData[0], list):
+                            newList = []
+                            for r in self.__parsedData:
+                                if (r is not None):
+                                    if (r[0]):
+                                        newList.append(r[0])
+                                        self.__parsedData = newList
             else:
                 self.__parsedData = [str(a) for a in html.select(self.__pattern.strippedPattern)]
 
@@ -40,3 +49,4 @@ class Result:
     @pattern.setter
     def pattern(self, value):
         self.__pattern = value
+
